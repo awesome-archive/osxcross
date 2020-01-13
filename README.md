@@ -2,8 +2,8 @@
 
 ### WHAT IS THE GOAL OF OSXCROSS? ###
 
-The goal of OSXCross is to provide a well working OS X cross toolchain for
-Linux and FreeBSD.
+The goal of OSXCross is to provide a well working OS X cross toolchain for  
+Linux, FreeBSD, OpenBSD and Android (Termux).
 
 OSXCross works **on** x86, x86_64, ARM and AArch64.
 
@@ -156,7 +156,7 @@ use these variants unless you know what you're doing.
 
 ##### Packaging the SDK on Mac OS X: #####
 
-1. [Download Xcode: https://xcodereleases.com] \*\*
+1. [Download Xcode: https://developer.apple.com/download/more] \*\*
 2. [Mount Xcode.dmg (Open With -> DiskImageMounter) \*\*\*]
 3. Run: `./tools/gen_sdk_package.sh` (from the OSXCross package)
 4. Copy the packaged SDK (\*.tar.\* or \*.pkg) on a USB Stick
@@ -164,7 +164,7 @@ use these variants unless you know what you're doing.
    OSXCross.
 
 \*\*  
--- Xcode up to 11.0.0 Beta is known to work.  
+-- Xcode up to 11 GM is known to work.  
 -- Use Firefox if you have problems signing in.
 
 \*\*\*  
@@ -175,7 +175,7 @@ Step 1. and 2. can be skipped if you have Xcode installed.
 
 ##### Packing the SDK on Linux - Method 1 (Xcode > 8.0): #####
 
-This method may require up to 20 GB of free disk space.  
+This method may require up to 25 GB of free disk space.  
 An SSD is recommended for this method.
 
 1. Download Xcode like described in 'Packaging the SDK on Mac OS X'
@@ -255,7 +255,7 @@ Usage Examples:
 
 * Clang:
 
-  * C++98: `o32-clang++ -stdlib=libc++ test.cpp -o test`
+  * C++98: `o32-clang++ -stdlib=libc++ -std=c++98 test.cpp -o test`
   * C++11: `o32-clang++ -stdlib=libc++ -std=c++11 test1.cpp -o test`
   * C++14: `o32-clang++ -stdlib=libc++ -std=c++14 test1.cpp -o test`
   * C++17: `o32-clang++ -stdlib=libc++ -std=c++17 test1.cpp -o test`
@@ -263,7 +263,7 @@ Usage Examples:
 
 * Clang (shortcut):
 
-  * C++98: `o32-clang++-libc++ test.cpp -o test`
+  * C++98: `o32-clang++-libc++ -std=c++98 test.cpp -o test`
   * C++11: `o32-clang++-libc++ -std=c++11 test.cpp -o test`
   * C++14: `o32-clang++-libc++ -std=c++14 test.cpp  -o test`
   * C++17: `o32-clang++-libc++ -std=c++17 test.cpp  -o test`
@@ -310,14 +310,6 @@ can be overriden by explicitly passing `-stdlib=libstdc++` to clang.
 
 x86\_64h defaults to `Mac OS X 10.8` and requires clang 3.5+.
 x86\_64h = x86\_64 with optimizations for the Intel Haswell Architecture.
-
-### BUILDING OSXCROSS WITH GCC: ###
-
-You can build OSXCross with GCC this way:
-
-`CC=gcc CXX=g++ ./build.sh`
-
-You will need gcc/g++/gcc-objc 4.7+.
 
 ### PROJECTS USING OSXCROSS: ###
 

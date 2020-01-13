@@ -15,32 +15,30 @@ DESC=gcc
 USESYSTEMCOMPILER=1
 source tools/tools.sh
 
-eval $(tools/osxcross_conf.sh)
-
 # GCC version to build
 # (<4.7 will not work properly with libc++)
 if [ -z "$GCC_VERSION" ]; then
-  GCC_VERSION=9.1.0
+  GCC_VERSION=9.2.0
   #GCC_VERSION=5-20140928 # snapshot
 fi
 
 # GCC mirror
-GCC_MIRROR="ftp://ftp.fu-berlin.de/unix/languages/gcc"
+GCC_MIRROR="https://mirror.koddos.net/gcc"
 
 require wget
 
-pushd $OSXCROSS_BUILD_DIR &>/dev/null
+pushd $BUILD_DIR &>/dev/null
 
 function remove_locks()
 {
-  rm -rf $OSXCROSS_BUILD_DIR/have_gcc*
+  rm -rf $BUILD_DIR/have_gcc*
 }
 
 source $BASE_DIR/tools/trap_exit.sh
 
-if [ ! -f "have_gcc_${GCC_VERSION}_${OSXCROSS_TARGET}" ]; then
+if [ ! -f "have_gcc_${GCC_VERSION}_${TARGET}" ]; then
 
-pushd $OSXCROSS_TARBALL_DIR &>/dev/null
+pushd $TARBALL_DIR &>/dev/null
 if [[ $GCC_VERSION != *-* ]]; then
   wget -c "$GCC_MIRROR/releases/gcc-$GCC_VERSION/gcc-$GCC_VERSION.tar.xz"
 else
@@ -51,13 +49,13 @@ popd &>/dev/null
 echo "cleaning up ..."
 rm -rf gcc* 2>/dev/null
 
-extract "$OSXCROSS_TARBALL_DIR/gcc-$GCC_VERSION.tar.xz"
+extract "$TARBALL_DIR/gcc-$GCC_VERSION.tar.xz"
 echo ""
 
 pushd gcc*$GCC_VERSION* &>/dev/null
 
-rm -f $OSXCROSS_TARGET_DIR/bin/*-gcc*
-rm -f $OSXCROSS_TARGET_DIR/bin/*-g++*
+rm -f $TARGET_DIR/bin/*-gcc*
+rm -f $TARGET_DIR/bin/*-g++*
 
 if [ $(osxcross-cmp $GCC_VERSION '>' 5.0.0) -eq 1 ] &&
    [ $(osxcross-cmp $GCC_VERSION '<' 5.3.0) -eq 1 ]; then
@@ -76,7 +74,7 @@ if [ $(osxcross-cmp $GCC_VERSION '==' 6.3.0) -eq 1 ]; then
   patch -p1 < $PATCH_DIR/darwin-driver.c.patch
 fi
 
-if [ $(osxcross-cmp $OSXCROSS_SDK_VERSION '>=' 10.14) -eq 1 ] &&
+if [ $(osxcross-cmp $SDK_VERSION '>=' 10.14) -eq 1 ] &&
    [ $(osxcross-cmp $GCC_VERSION '<' 9.0.0) -eq 1 ]; then
   files_to_patch=(
     libsanitizer/asan/asan_mac.cc
@@ -115,8 +113,8 @@ fi
 EXTRACONFFLAGS=""
 
 if [ "$PLATFORM" != "Darwin" ]; then
-  EXTRACONFFLAGS+="--with-ld=$OSXCROSS_TARGET_DIR/bin/x86_64-apple-$OSXCROSS_TARGET-ld "
-  EXTRACONFFLAGS+="--with-as=$OSXCROSS_TARGET_DIR/bin/x86_64-apple-$OSXCROSS_TARGET-as "
+  EXTRACONFFLAGS+="--with-ld=$TARGET_DIR/bin/x86_64-apple-$TARGET-ld "
+  EXTRACONFFLAGS+="--with-as=$TARGET_DIR/bin/x86_64-apple-$TARGET-as "
 fi
 
 LANGS="c,c++,objc,obj-c++"
@@ -125,22 +123,22 @@ if [ -n "$ENABLE_FORTRAN" ]; then
   LANGS+=",fortran"
 fi
 
-if [ $(osxcross-cmp $OSXCROSS_SDK_VERSION "<=" 10.13) -eq 1 ]; then
+if [ $(osxcross-cmp $SDK_VERSION "<=" 10.13) -eq 1 ]; then
   EXTRACONFFLAGS+="--with-multilib-list=m32,m64 --enable-multilib "
 else
   EXTRACONFFLAGS+="--disable-multilib "
 fi
 
 ../configure \
-  --target=x86_64-apple-$OSXCROSS_TARGET \
-  --with-sysroot=$OSXCROSS_SDK \
+  --target=x86_64-apple-$TARGET \
+  --with-sysroot=$SDK \
   --disable-nls \
   --enable-languages=$LANGS \
   --without-headers \
   --enable-lto \
   --enable-checking=release \
   --disable-libstdcxx-pch \
-  --prefix=$OSXCROSS_TARGET_DIR \
+  --prefix=$TARGET_DIR \
   --with-system-zlib \
   $EXTRACONFFLAGS
 
@@ -149,11 +147,11 @@ $MAKE install
 
 GCC_VERSION=`echo $GCC_VERSION | tr '-' ' ' |  awk '{print $1}'`
 
-pushd $OSXCROSS_TARGET_DIR/x86_64-apple-$OSXCROSS_TARGET/include &>/dev/null
+pushd $TARGET_DIR/x86_64-apple-$TARGET/include &>/dev/null
 pushd c++/${GCC_VERSION}* &>/dev/null
 
-cat $OSXCROSS_TARGET_DIR/../patches/libstdcxx.patch | \
-  $SED "s/darwin13/$OSXCROSS_TARGET/g" | \
+cat $PATCH_DIR/libstdcxx.patch | \
+  $SED "s/darwin13/$TARGET/g" | \
   patch -p0 -l &>/dev/null || true
 
 popd &>/dev/null
@@ -162,7 +160,7 @@ popd &>/dev/null
 popd &>/dev/null # build
 popd &>/dev/null # gcc
 
-touch "have_gcc_${GCC_VERSION}_${OSXCROSS_TARGET}"
+touch "have_gcc_${GCC_VERSION}_${TARGET}"
 
 fi # have gcc
 
@@ -171,41 +169,34 @@ popd &>/dev/null # build dir
 unset USESYSTEMCOMPILER
 source tools/tools.sh
 
-pushd $OSXCROSS_TARGET_DIR/bin &>/dev/null
+pushd $TARGET_DIR/bin &>/dev/null
 
+if [ ! -f i386-apple-$TARGET-base-gcc ]; then
+  mv x86_64-apple-$TARGET-gcc \
+    x86_64-apple-$TARGET-base-gcc
 
-if [ ! -f i386-apple-$OSXCROSS_TARGET-base-gcc ]; then
-  mv x86_64-apple-$OSXCROSS_TARGET-gcc \
-    x86_64-apple-$OSXCROSS_TARGET-base-gcc
+  mv x86_64-apple-$TARGET-g++ \
+    x86_64-apple-$TARGET-base-g++
 
-  mv x86_64-apple-$OSXCROSS_TARGET-g++ \
-    x86_64-apple-$OSXCROSS_TARGET-base-g++
+  if [ $(osxcross-cmp $SDK_VERSION "<=" 10.13) -eq 1 ]; then
+    create_symlink x86_64-apple-$TARGET-base-gcc \
+                   i386-apple-$TARGET-base-gcc
 
-  if [ $(osxcross-cmp $OSXCROSS_SDK_VERSION "<=" 10.13) -eq 1 ]; then
-    create_symlink x86_64-apple-$OSXCROSS_TARGET-base-gcc \
-                  i386-apple-$OSXCROSS_TARGET-base-gcc
-
-    create_symlink x86_64-apple-$OSXCROSS_TARGET-base-g++ \
-                  i386-apple-$OSXCROSS_TARGET-base-g++
+    create_symlink x86_64-apple-$TARGET-base-g++ \
+                   i386-apple-$TARGET-base-g++
   fi
 fi
 
 echo "compiling wrapper ..."
 
-export OSXCROSS_VERSION
-export OSXCROSS_LIBLTO_PATH
-export OSXCROSS_TARGET
-export OSXCROSS_OSX_VERSION_MIN=$OSXCROSS_OSX_VERSION_MIN
-export OSXCROSS_LINKER_VERSION=$OSXCROSS_LINKER_VERSION
-
 TARGETCOMPILER=gcc \
-  $BASE_DIR/wrapper/build.sh 1>/dev/null
+  $BASE_DIR/wrapper/build_wrapper.sh
 
 popd &>/dev/null # wrapper dir
 
 echo ""
 
-if [ $(osxcross-cmp $OSXCROSS_SDK_VERSION "<=" 10.13) -eq 1 ]; then
+if [ $(osxcross-cmp $SDK_VERSION "<=" 10.13) -eq 1 ]; then
   test_compiler o32-gcc $BASE_DIR/oclang/test.c
   test_compiler o32-g++ $BASE_DIR/oclang/test.cpp
 fi
@@ -219,8 +210,8 @@ echo "Done! Now you can use o32-gcc/o32-g++ and o64-gcc/o64-g++ as compiler"
 echo ""
 echo "Example usage:"
 echo ""
-echo "Example 1: CC=o32-gcc ./configure --host=i386-apple-$OSXCROSS_TARGET"
-echo "Example 2: CC=i386-apple-$OSXCROSS_TARGET-gcc ./configure --host=i386-apple-$OSXCROSS_TARGET"
+echo "Example 1: CC=o32-gcc ./configure --host=i386-apple-$TARGET"
+echo "Example 2: CC=i386-apple-$TARGET-gcc ./configure --host=i386-apple-$TARGET"
 echo "Example 3: o64-gcc -Wall test.c -o test"
-echo "Example 4: x86_64-apple-$OSXCROSS_TARGET-strip -x test"
+echo "Example 4: x86_64-apple-$TARGET-strip -x test"
 echo ""

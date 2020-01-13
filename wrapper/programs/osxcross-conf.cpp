@@ -31,7 +31,12 @@ int conf(Target &target) {
   std::string SDKPath;
   OSVersion OSXVersionMin = getDefaultMinTarget();
   const char *ltopath = getLibLTOPath();
-  const char *builddir = getBuildDir();
+  std::string BuildDir = getBuildDir();
+
+  if (BuildDir.empty()) {
+    BuildDir += target.execpath;
+    BuildDir += "/../../build";
+  }
 
   if (!target.getSDKPath(SDKPath))
     return 1;
@@ -42,40 +47,25 @@ int conf(Target &target) {
   if (!ltopath)
     ltopath = "";
 
-  std::cout << "export OSXCROSS_VERSION=" << getOSXCrossVersion()
-            << std::endl;
-  std::cout << "export OSXCROSS_OSX_VERSION_MIN=" << OSXVersionMin.shortStr()
-            << std::endl;
-  std::cout << "export OSXCROSS_TARGET=" << getDefaultTarget()
-            << std::endl;
-  std::cout << "export OSXCROSS_SDK_VERSION=" << target.getSDKOSNum().shortStr()
-            << std::endl;
-  std::cout << "export OSXCROSS_SDK=" << SDKPath
-            << std::endl;
-  std::cout << "export OSXCROSS_TARBALL_DIR=" << target.execpath
-            << "/../../tarballs"
-            << std::endl;
-  std::cout << "export OSXCROSS_PATCH_DIR=" << target.execpath
-            << "/../../patches"
-            << std::endl;
-  std::cout << "export OSXCROSS_TARGET_DIR=" << target.execpath << "/.."
-            << std::endl;
+  auto print = [](const char *var, const auto &val) {
+    std::cout << "export OSXCROSS_" << var << "=" << val << std::endl;
+  };
 
-  std::cout << "export OSXCROSS_BUILD_DIR=";
-
-  if (builddir[0])
-    std::cout << builddir;
-  else
-    std::cout << target.execpath << "/../../build";
-
-  std::cout << std::endl;
-
-  std::cout << "export OSXCROSS_CCTOOLS_PATH=" << target.execpath
-            << std::endl;
-  std::cout << "export OSXCROSS_LIBLTO_PATH=" << ltopath
-            << std::endl;
-  std::cout << "export OSXCROSS_LINKER_VERSION=" << getLinkerVersion()
-            << std::endl;
+  print("VERSION", getOSXCrossVersion());
+  print("OSX_VERSION_MIN", OSXVersionMin.shortStr());
+  print("TARGET", getDefaultTarget());
+  print("BASE_DIR", BuildDir + "/..");
+  print("SDK", SDKPath);
+  print("SDK_DIR", SDKPath + "/..");
+  print("SDK_VERSION", target.getSDKOSNum().shortStr());
+  print("TARBALL_DIR", BuildDir + "/../tarballs");
+  print("PATCH_DIR", BuildDir + "/../patches");
+  print("TARGET_DIR", std::string(target.execpath) + "/..");
+  print("DIR_SDK_TOOLS", SDKPath + "/../tools");
+  print("BUILD_DIR", BuildDir);
+  print("CCTOOLS_PATH", target.execpath);
+  print("LIBLTO_PATH", ltopath);
+  print("LINKER_VERSION", getLinkerVersion());
 
   return 0;
 }

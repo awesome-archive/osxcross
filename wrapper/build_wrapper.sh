@@ -6,19 +6,19 @@ source ./tools/tools.sh
 popd &>/dev/null
 
 set +e
-if [ -z "$OSXCROSS_VERSION" ]; then
-  eval $(../target/bin/osxcross-conf 2>/dev/null)
+if [ -z "$VERSION" ]; then
+  eval $(${TARGET_DIR}/bin/osxcross-conf 2>/dev/null)
 
-  if [ -n "$OSXCROSS_SDK_VERSION" ]; then
+  if [ -n "$SDK_VERSION" ]; then
     if [ -z "$X86_64H_SUPPORTED" ]; then
-      if [ $(osxcross-cmp $OSXCROSS_SDK_VERSION ">=" 10.8) -eq 1 ]; then
+      if [ $(osxcross-cmp $SDK_VERSION ">=" 10.8) -eq 1 ]; then
         X86_64H_SUPPORTED=1
       else
         X86_64H_SUPPORTED=0
       fi
     fi
     if [ -z "$I386_SUPPORTED" ]; then
-      if [ $(osxcross-cmp $OSXCROSS_SDK_VERSION "<=" 10.13) -eq 1 ]; then
+      if [ $(osxcross-cmp $SDK_VERSION "<=" 10.13) -eq 1 ]; then
         I386_SUPPORTED=1
       else
         I386_SUPPORTED=0
@@ -61,16 +61,16 @@ function create_wrapper_link
 
   if [ $I386_SUPPORTED -eq 1 ]; then
     verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" \
-      "i386-apple-${OSXCROSS_TARGET}-${1}"
+      "i386-apple-${TARGET}-${1}"
   fi
 
   verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" \
-    "x86_64-apple-${OSXCROSS_TARGET}-${1}"
+    "x86_64-apple-${TARGET}-${1}"
 
   if [ $X86_64H_SUPPORTED -eq 1 ] &&
      ([[ $1 != gcc* ]] && [[ $1 != g++* ]] && [[ $1 != *gstdc++ ]]); then
     verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" \
-      "x86_64h-apple-${OSXCROSS_TARGET}-${1}"
+      "x86_64h-apple-${TARGET}-${1}"
   fi
 
   if [ $# -ge 2 ] && [ $2 -eq 2 ]; then
@@ -92,7 +92,7 @@ function create_wrapper_link
 
 [ -z "$TARGETCOMPILER" ] && TARGETCOMPILER=clang
 
-TARGETTRIPLE=x86_64-apple-${OSXCROSS_TARGET}
+TARGETTRIPLE=x86_64-apple-${TARGET}
 
 FLAGS=""
 
@@ -127,13 +127,13 @@ fi
 
 function compile_wrapper()
 {
-  mkdir -p ../target ../target/bin
+  mkdir -p ${TARGET_DIR}/bin
   export PLATFORM
   export CXX
 
   verbose_cmd $MAKE clean
 
-  OSXCROSS_CXXFLAGS="$FLAGS" \
+  ADDITIONAL_CXXFLAGS="$FLAGS" \
     verbose_cmd $MAKE wrapper -j$JOBS
 }
 
@@ -145,7 +145,7 @@ fi
 
 verbose_cmd mv wrapper "${TARGET_DIR}/bin/${TARGETTRIPLE}-wrapper"
 
-pushd "../target/bin" &>/dev/null
+pushd "${TARGET_DIR}/bin" &>/dev/null
 
 if [ $TARGETCOMPILER = "clang" ]; then
   create_wrapper_link clang 2
@@ -171,7 +171,24 @@ create_wrapper_link pkg-config
 
 if [ "$PLATFORM" != "Darwin" ]; then
   create_wrapper_link sw_vers 1
-  create_wrapper_link dsymutil 1
+
+  if which dsymutil &>/dev/null; then
+    # If dsymutil is in PATH then it's most likely a recent
+    # LLVM dsymutil version. In this case don't wrap it.
+    # Just create target symlinks.
+
+    verbose_cmd create_symlink $(which dsymutil) x86_64-apple-$TARGET-dsymutil
+
+    if [ $I386_SUPPORTED -eq 1 ]; then
+      verbose_cmd create_symlink $(which dsymutil) i386-apple-$TARGET-dsymutil
+    fi
+    if [ $X86_64H_SUPPORTED -eq 1 ]; then
+      verbose_cmd create_symlink $(which dsymutil) x86_64h-apple-$TARGET-dsymutil
+    fi
+  else
+    create_wrapper_link dsymutil 1
+  fi
+
   create_wrapper_link xcrun 1
 fi
 
